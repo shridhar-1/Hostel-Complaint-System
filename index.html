@@ -1141,24 +1141,24 @@
         </div>
       </footer>
     </div>
-    <script>
-  // Initialize complaints from localStorage or start empty
+   <script>
   let complaints = JSON.parse(localStorage.getItem('hostelComplaints')) || [];
   const form = document.querySelector('.form-grid');
   const cardsGrid = document.querySelector('.cards-grid');
+  const catFilter = document.getElementById('catFilter');
+  const statusFilter = document.getElementById('statusFilter');
 
-  // Handle form submission
+  // Form submission with Validation
   form.addEventListener('submit', function(e) {
     e.preventDefault();
-
     const name = document.getElementById('studentName').value.trim();
     const room = document.getElementById('roomNumber').value.trim();
     const category = document.getElementById('category').value;
     const description = document.getElementById('description').value.trim();
 
-    // Basic validation (Commit 4 prep)
+    // Validation Rule: No empty submissions
     if (!name || !room || !description) {
-      alert("Please fill in all fields before submitting.");
+      alert("Error: All fields are required to submit a complaint.");
       return;
     }
 
@@ -1172,21 +1172,19 @@
       timestamp: new Date().toLocaleString([], { month: 'short', day: '2-digit', hour: '2-digit', minute: '2-digit' })
     };
 
-    // Save and render
     complaints.unshift(newComplaint);
     localStorage.setItem('hostelComplaints', JSON.stringify(complaints));
     renderComplaints();
     form.reset();
   });
 
-  // Handle Delete
+  // Actions
   window.deleteComplaint = function(id) {
     complaints = complaints.filter(c => c.id !== id);
     localStorage.setItem('hostelComplaints', JSON.stringify(complaints));
     renderComplaints();
   }
 
-  // Handle Status Change
   window.updateStatus = function(id, newStatus) {
     const complaint = complaints.find(c => c.id === id);
     if (complaint) {
@@ -1196,17 +1194,35 @@
     }
   }
 
-  // Render cards to the screen
+  // Update Dynamic Stats
+  function updateStats(filteredCount) {
+    document.querySelector('.stat-box:nth-child(1) .stat-value').textContent = complaints.length;
+    document.querySelector('.stat-box:nth-child(2) .stat-value').textContent = complaints.filter(c => c.status === 'Pending').length;
+    document.querySelector('.stat-box:nth-child(3) .stat-value').textContent = complaints.filter(c => c.status === 'In Progress').length;
+    document.querySelector('.stat-box:nth-child(4) .stat-value').textContent = complaints.filter(c => c.status === 'Resolved').length;
+    document.querySelector('.section-subtitle').textContent = `Showing ${filteredCount} of ${complaints.length} complaints.`;
+  }
+
+  // Render & Filter Logic
   function renderComplaints() {
+    const catValue = catFilter.value;
+    const statusValue = statusFilter.value;
+
+    const filtered = complaints.filter(c => {
+      const matchCat = catValue === 'All' || c.category === catValue;
+      const matchStatus = statusValue === 'All' || c.status === statusValue;
+      return matchCat && matchStatus;
+    });
+
+    updateStats(filtered.length);
     cardsGrid.innerHTML = ''; 
-    
-    if(complaints.length === 0) {
+
+    if(filtered.length === 0) {
       cardsGrid.innerHTML = '<p style="color: #64748b; grid-column: 1 / -1; text-align: center;">No complaints found. Submit one above!</p>';
       return;
     }
 
-    complaints.forEach(c => {
-      // Determine styling based on category and status
+    filtered.forEach(c => {
       let badgeClass = 'badge-other';
       if (c.category === 'Mess') badgeClass = 'badge-mess';
       else if (c.category === 'Maintenance') badgeClass = 'badge-maintenance';
@@ -1258,6 +1274,10 @@
       cardsGrid.appendChild(card);
     });
   }
+
+  // Event listeners for filters
+  catFilter.addEventListener('change', renderComplaints);
+  statusFilter.addEventListener('change', renderComplaints);
 
   // Run on page load
   renderComplaints();
